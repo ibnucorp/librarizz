@@ -32,5 +32,7 @@ func main() {
 	router.DELETE("/books/:id", controller.DeleteBook(db))
 	router.POST("/register", controller.Register(db))
 	router.POST("/login", controller.Login(db))
+
+	
 	router.Run(":8080")
 }
