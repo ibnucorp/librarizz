@@ -1,153 +1,116 @@
 package controller
 
 import (
-	"librarizz/models"
-	"strconv"
+  "librarizz/models"
+  "strconv"
 
-	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
+  "github.com/gin-gonic/gin"
+  "gorm.io/gorm"
 )
 
 func InputBook(db *gorm.DB) gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		// Parse and convert stock
-		stock, err := strconv.Atoi(ctx.PostForm("stock"))
-		if err != nil {
-			ctx.JSON(400, gin.H{"message": "Stock must be a number"})
-			return
-		}
+  return func(ctx *gin.Context) {
+    // Parse and convert stock
+    stock, err := strconv.Atoi(ctx.PostForm("stock"))
+    if err != nil {
+      ctx.JSON(400, gin.H{"message": "Stock must be a number"})
+      return
+    }
 
-		// Get user role from context
-		userRole, exists := ctx.Get("role")
-		if !exists {
-			// Handle case where role is not set in context
-			ctx.JSON(400, gin.H{"message": "Missing role in context"})
-			return
-		}
+    // Create a new book instance
+    var newBook models.Book
+    newBook.Title = ctx.PostForm("title") // Add this line
+    newBook.Publisher = ctx.PostForm("publisher") // Add this line
+    newBook.Genre = ctx.PostForm("genre") // Add this line
+    newBook.Stock = stock
 
-		if userRole != "admin" {
-			ctx.JSON(403, gin.H{"message": "Permission denied"})
-			return
-		}
-
-		// Create new book
-		var newBook models.Book
-		if err := ctx.ShouldBind(&newBook); err != nil {
-			ctx.JSON(400, gin.H{"message": "Invalid request body"})
-			return
-		}
-		newBook.Stock = stock
-
-		// Save data and send response
-		db.Create(&newBook)
-		ctx.JSON(201, newBook)
-	}
+    // Save data and send response
+    db.Create(&newBook)
+    ctx.JSON(201, newBook)
+  }
 }
 
+
 func ShowAllBooks(db *gorm.DB) gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		var books []models.Book
-		db.Find(&books)
-		ctx.JSON(200, books)
-	}
+  return func(ctx *gin.Context) {
+    var books []models.Book
+    db.Find(&books)
+    ctx.JSON(200, books)
+  }
 }
 
 func GetBook(db *gorm.DB) gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		ID := ctx.Param("id")
-		var book models.Book
+  return func(ctx *gin.Context) {
+    ID := ctx.Param("id")
+    var book models.Book
 
-		if err := db.First(&book, "id=?", ID).Error; err != nil {
-			ctx.JSON(404, gin.H{"message": "Book ID not found"})
-			return
-		}
+    if err := db.First(&book, "id=?", ID).Error; err != nil {
+      ctx.JSON(404, gin.H{"message": "Book ID not found"})
+      return
+    }
 
-		ctx.JSON(200, book)
-	}
+    ctx.JSON(200, book)
+  }
 }
 
 func UpdateBook(db *gorm.DB) gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		ID := ctx.Param("id")
-		var book models.Book
+  return func(ctx *gin.Context) {
+    ID := ctx.Param("id")
+    var book models.Book
 
-		if err := db.First(&book, "id=?", ID).Error; err != nil {
-			ctx.JSON(400, gin.H{"message": "Book ID not found"})
-			return
-		}
+    if err := db.First(&book, "id=?", ID).Error; err != nil {
+      ctx.JSON(400, gin.H{"message": "Book ID not found"})
+      return
+    }
 
-		stock, err := strconv.Atoi(ctx.PostForm("stock"))
-		if err != nil {
-			ctx.JSON(400, "Stock must be a number")
-			return
-		}
+    stock, err := strconv.Atoi(ctx.PostForm("stock"))
+    if err != nil {
+      ctx.JSON(400, gin.H{"message": "Stock must be a number"})
+      return
+    }
 
-		// Get user role from context
-		userRole, exists := ctx.Get("role")
-		if !exists {
-			ctx.JSON(400, gin.H{"message": "Missing role in context"})
-			return
-		}
+    var updatedBook = models.Book{
+      ID:        book.ID,
+      Title:    ctx.PostForm("title"),
+      Publisher: ctx.PostForm("publisher"),
+      Genre:    ctx.PostForm("genre"),
+      Stock:    stock,
+    }
 
-		if userRole != "admin" {
-			ctx.JSON(403, gin.H{"message": "Permission denied"})
-			return
-		}
-
-		var updatedBook = models.Book{
-			ID:       book.ID,
-			Title:    ctx.PostForm("title"),
-			Publisher: ctx.PostForm("publisher"),
-			Genre:    ctx.PostForm("genre"),
-			Stock:    stock,
-		}
-
-		db.Model(&book).Updates(updatedBook)
-		ctx.JSON(200, book)
-	}
+    db.Model(&book).Updates(updatedBook)
+    ctx.JSON(200, book)
+  }
 }
 
 func DeleteBook(db *gorm.DB) gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		ID := ctx.Param("id")
-		var book models.Book
+  return func(ctx *gin.Context) {
+    ID := ctx.Param("id")
+    var book models.Book
 
-		if err := db.First(&book, "id=?", ID).Error; err != nil {
-			ctx.JSON(404, gin.H{"message": "Book ID not found"})
-			return
-		}
+    if err := db.First(&book, "id=?", ID).Error; err != nil {
+      ctx.JSON(404, gin.H{"message": "Book ID not found"})
+      return
+    }
 
-		// Get user role from context
-		userRole, exists := ctx.Get("role")
-		if !exists {
-			ctx.JSON(400, gin.H{"message": "Missing role in context"})
-			return
-		}
-
-		if userRole != "admin" {
-			ctx.JSON(403, gin.H{"message": "Permission denied"})
-			return
-		}
-
-		db.Delete(&book)
-		ctx.JSON(200, gin.H{"message": "Book successfully deleted"})
-	}
+    db.Delete(&book)
+    ctx.JSON(200, gin.H{"message": "Book successfully deleted"})
+  }
 }
 
 func GetBookByGenre(db *gorm.DB) gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		genre := ctx.Param("genre")
-		var books []models.Book
+  return func(ctx *gin.Context) {
+    genre := ctx.Param("genre")
+    var books []models.Book
 
-		if err := db.Where("genre LIKE ?", "%"+genre+"%").Find(&books).Error; err != nil {
-			ctx.JSON(404, gin.H{"message": "Books not found"})
-			return
-		}
+    if err := db.Where("genre LIKE ?", "%"+genre+"%").Find(&books).Error; err != nil {
+      ctx.JSON(404, gin.H{"message": "Books not found"})
+      return
+    }
 
-		if len(books) == 0 {
-			ctx.JSON(404, gin.H{"message": "No books found for the given genre"})
-			return
-		}
-		ctx.JSON(200, books)
-	}
+    if len(books) == 0 {
+      ctx.JSON(404, gin.H{"message": "No books found for the given genre"})
+      return
+    }
+    ctx.JSON(200, books)
+  }
 }
